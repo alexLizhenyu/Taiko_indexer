@@ -1,0 +1,44 @@
+version: "3.1"
+services:
+  postgres:
+    container_name: postgres-erc20-indexer
+    image: postgres:latest
+    restart: always
+    ports:
+      - "15432:5432"
+    command: ["postgres", "-cshared_preload_libraries=pg_stat_statements"]
+    #command: ["postgres", "-cshared_preload_libraries=pg_stat_statements", "-clog_statement=all"]
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secure
+      POSTGRES_DB: erc20-indexer
+    volumes:
+      - ${HOME}/.sip/indexer/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5432"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+    networks:
+      - SIP
+  pgweb:
+    container_name: pgweb-erc20-indexer
+    image: sosedoff/pgweb:0.11.10
+    restart: on-failure
+    ports:
+      - "18080:8080"
+    command: ["pgweb", "--bind=0.0.0.0", "--listen=8080", "--binary-codec=hex"]
+    #command: ["pgweb", "--binary-codec=base58"]
+    #command: ["pgweb", "--binary-codec=base64"]
+    links:
+      - postgres:postgres
+    environment:
+      - DATABASE_URL=postgres://admin:secure@postgres-erc20-indexer:5432/erc20-indexer?sslmode=disable
+    depends_on:
+      - postgres
+    networks:
+      - SIP
+
+networks:
+  SIP:
+    external: true

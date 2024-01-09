@@ -1,0 +1,37 @@
+version: "3.1"
+services:
+  iela-indexer:
+    container_name: iela-indexer
+    restart: always
+    image: iela-indexer:0.1.0
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    # ports:
+    #   - "8081:8081"
+    depends_on:
+      - db-init
+    entrypoint:
+      [
+        "iela-indexer",
+        "sync",
+        "--start-block=${START_BLOCK:-0}",
+        "--endpoint-url=${ENDPOINT_URL:-https://mainnet.era.zksync.io}",
+      ]
+    environment:
+      DATABASE_URL: postgres://admin:secure@postgres-iela-indexer:5432/iela-indexer-dev?sslmode=disable
+    networks:
+      - SIP
+  db-init:
+    image: willsquire/diesel-cli:latest
+    networks:
+      - SIP
+    environment:
+      DATABASE_URL: postgres://admin:secure@postgres-iela-indexer:5432/erc20-indexer?sslmode=disable
+    volumes:
+      - ./migrations:/app/migrations
+    command: ["migration", "run"]
+
+networks:
+  SIP:
+    external: true
